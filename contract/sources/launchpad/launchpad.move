@@ -21,7 +21,6 @@ module swift_nft::launchpad {
     use sui::vec_map::VecMap;
     use sui::vec_map;
     use sui::transfer::public_transfer;
-    // use swift_nft::launchpad_sale::modify_whitelist;
     use swift_nft::launchpad_whitelist::{check_whitelist, Activity};
     use swift_nft::launchpad_whitelist;
     use swift_nft::launchpad_sale::modify_whitelist_status;
@@ -230,13 +229,15 @@ module swift_nft::launchpad {
         assert!(launchpad.minted_count < launchpad.max_count, EMintInsufficient);
         let market_price = launchpad.price * market_fee / 100;
         let price = launchpad.price - market_fee;
-        pay::split_and_transfer(buyer_funds, market_price, sender(ctx), ctx);
+        if (market_price > 0) {
+            pay::split_and_transfer(buyer_funds, market_price, sender(ctx), ctx);
+        };
         let fund = coin::split(buyer_funds, price, ctx);
         let borrow_mut_sale = launchpad_slingshot::borrow_mut_sales<Item, Launchpad<Item, CoinType>>(slingshot, sale_id);
         let mut_launchpad = launchpad_sale::get_mut_market<Item, Launchpad<Item, CoinType>>(borrow_mut_sale);
         let claimed_count_option = vec_map::try_get<address, u64>(&mut mut_launchpad.claimed, &addr);
         if (option::is_some(&claimed_count_option) == true) {
-            let claimed_count = *option::borrow_mut(&mut claimed_count_option);
+            let claimed_count = option::extract(&mut claimed_count_option);
             assert!(claimed_count < mut_launchpad.allow_count, EMintInsufficient);
             vec_map::insert(&mut mut_launchpad.claimed, addr, claimed_count + 1);
         }else{
