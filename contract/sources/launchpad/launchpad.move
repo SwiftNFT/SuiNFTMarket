@@ -3,7 +3,6 @@
 module swift_nft::launchpad {
     use sui::object::{UID, ID};
     use sui::coin::Coin;
-    use std::option::{Option};
     use std::vector;
     use sui::tx_context::{TxContext, sender};
     use sui::object;
@@ -21,7 +20,6 @@ module swift_nft::launchpad {
     use sui::vec_map::VecMap;
     use sui::vec_map;
     use sui::transfer::public_transfer;
-    // use swift_nft::launchpad_sale::modify_whitelist;
     use swift_nft::launchpad_whitelist::{check_whitelist, Activity};
     use swift_nft::launchpad_whitelist;
     use swift_nft::launchpad_sale::modify_whitelist_status;
@@ -35,7 +33,7 @@ module swift_nft::launchpad {
         allow_count: u64,
         price: u64,
         claimed: VecMap<address, u64>,
-        balance: Option<Coin<CoinType>>
+        balance: Coin<CoinType>
     }
 
     struct SwiftNftLaunchpadManagerCap has key, store {
@@ -94,7 +92,7 @@ module swift_nft::launchpad {
                 allow_count,
                 price,
                 claimed: vec_map::empty(),
-                balance: option::none(),
+                balance: coin::zero<CoinType>(ctx),
             };
             launchpad_event::launchpad_created_event<Item, Launchpad<Item, CoinType>>(
                 object::id(&launchpad),
@@ -171,9 +169,10 @@ module swift_nft::launchpad {
         let admin = launchpad_slingshot::borrow_admin(slingshot);
         assert!(admin == tx_context::sender(ctx), EOperateNotAuth);
         let borrow_mut_sale = launchpad_slingshot::borrow_mut_sales(slingshot, sale_id);
-        let funds = &mut launchpad_sale::get_mut_market<Item, Launchpad<Item, CoinType>>(borrow_mut_sale).balance;
-        let money = option::extract(funds);
-        transfer::public_transfer(money, receiver)
+        let launchpad = launchpad_sale::get_mut_market<Item, Launchpad<Item, CoinType>>(borrow_mut_sale);
+        let balances = coin::value(&launchpad.balance);
+        let coins = coin::split(&mut launchpad.balance, balances, ctx);
+        transfer::public_transfer(coins, receiver)
     }
 
     public entry fun list_item<Item: key+store, CoinType>(
@@ -230,13 +229,15 @@ module swift_nft::launchpad {
         assert!(launchpad.minted_count < launchpad.max_count, EMintInsufficient);
         let market_price = launchpad.price * market_fee / 100;
         let price = launchpad.price - market_fee;
-        pay::split_and_transfer(buyer_funds, market_price, sender(ctx), ctx);
+        if (market_price > 0) {
+            pay::split_and_transfer(buyer_funds, market_price, sender(ctx), ctx);
+        };
         let fund = coin::split(buyer_funds, price, ctx);
         let borrow_mut_sale = launchpad_slingshot::borrow_mut_sales<Item, Launchpad<Item, CoinType>>(slingshot, sale_id);
         let mut_launchpad = launchpad_sale::get_mut_market<Item, Launchpad<Item, CoinType>>(borrow_mut_sale);
         let claimed_count_option = vec_map::try_get<address, u64>(&mut mut_launchpad.claimed, &addr);
         if (option::is_some(&claimed_count_option) == true) {
-            let claimed_count = *option::borrow_mut(&mut claimed_count_option);
+            let claimed_count = option::extract(&mut claimed_count_option);
             assert!(claimed_count < mut_launchpad.allow_count, EMintInsufficient);
             vec_map::insert(&mut mut_launchpad.claimed, addr, claimed_count + 1);
         }else{
@@ -246,9 +247,9 @@ module swift_nft::launchpad {
         let item = launchpad_sale::withdraw(borrow_mut_sale, ctx);
 
 
-        let market_coin = &mut launchpad_sale::get_mut_market<Item, Launchpad<Item, CoinType>>(borrow_mut_sale).balance;
-        let funds = option::borrow_mut(market_coin);
-        pay::join(funds, fund);
+        let sale_coin = &mut launchpad_sale::get_mut_market<Item, Launchpad<Item, CoinType>>(borrow_mut_sale).balance;
+        // let funds = option::borrow_mut(sale_coin);
+        pay::join(sale_coin, fund);
         // slingshot_market_event::item_purchased_event<Item, SlingshotMarket<Item, CoinType>>(
         //     object::id(slingshot),
         //     sale_id,
