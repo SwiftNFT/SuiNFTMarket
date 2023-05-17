@@ -28,7 +28,7 @@ module swift_nft::launchpad_whitelist {
             id: object::new(ctx),
             root,
         };
-        launchpad_event::activity_created_event<Item, Launchpad>(object::id(&activity), sale_id, root);
+        launchpad_event::activity_created_event(object::id(&activity), sale_id, root);
         transfer::share_object(activity);
     }
 

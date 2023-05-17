@@ -9,14 +9,11 @@ module swift_nft::launchpad_slingshot {
     use sui::transfer;
     use std::vector;
     use sui::tx_context;
-    use swift_nft::launchpad_event;
-    // use swift_nft::slingshot_event;
     friend swift_nft::launchpad;
 
 
     struct Slingshot<phantom Item: key+store, Launchpad: store> has key, store {
         id: UID,
-        collection_id: ID,
         admin: address,
         live: bool,
         market_fee: u64,
@@ -28,37 +25,32 @@ module swift_nft::launchpad_slingshot {
 
 
     public(friend) fun create_slingshot<Item: key+store, Launchpad: store>(
-        collection_id: ID,
         admin: address,
         live: bool,
         market_fee: u64,
         sales: vector<Sale<Item, Launchpad>>,
         ctx: &mut TxContext
-    ) {
+    ): ID {
         let slingshot = Slingshot<Item, Launchpad> {
             id: object::new(ctx),
-            collection_id,
             admin,
             live,
             market_fee,
             sales: object_table::new(ctx),
         };
-        let slingshot_id = object::id(&slingshot);
-
         let length = vector::length(&sales);
-        let sale_ids = vector::empty<ID>();
         let i = 0;
         while (i < length) {
             let pop_sales = vector::pop_back(&mut sales);
             let sale_id = object::id(&pop_sales);
-            vector::push_back(&mut sale_ids, sale_id);
             object_table::add(&mut slingshot.sales, sale_id, pop_sales);
             i = i + 1
         };
-        launchpad_event::slingshot_create_event<Item, Launchpad>(slingshot_id, collection_id, admin, live, market_fee, sale_ids);
-
         vector::destroy_empty(sales);
+        let slingshot_id = object::id(&slingshot);
         transfer::share_object(slingshot);
+
+        return slingshot_id
     }
 
     public fun add_multi_sales<Item: key+store, Launchpad: store>(
@@ -107,8 +99,12 @@ module swift_nft::launchpad_slingshot {
     }
 
 
-    public fun borrow_admin<Item: key+store, Launchpad: store>(slingshot: &Slingshot<Item, Launchpad>, ): address {
+    public fun borrow_admin<Item: key+store, Launchpad: store>(slingshot: &Slingshot<Item, Launchpad>): address {
         slingshot.admin
+    }
+
+    public fun borrow_live<Item: key+store, Launchpad: store>(slingshot: &Slingshot<Item, Launchpad>): bool {
+        slingshot.live
     }
 
     public fun borrow_market_fee<Item: key+store, Launchpad: store>(slingshot: &Slingshot<Item, Launchpad>, ): u64 {

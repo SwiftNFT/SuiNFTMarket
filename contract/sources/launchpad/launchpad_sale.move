@@ -6,7 +6,6 @@ module swift_nft::launchpad_sale {
     use std::vector;
     use sui::object_table::{Self, ObjectTable};
     use swift_nft::random;
-    use swift_nft::launchpad_event;
 
     friend swift_nft::launchpad;
 
@@ -25,7 +24,7 @@ module swift_nft::launchpad_sale {
         nft_index: vector<ID>,
     }
 
-    public fun create_sale<Item: key+store, Launchpad: store>(
+    public(friend) fun create_sale<Item: key+store, Launchpad: store>(
         whitelist: bool,
         launchpad: Launchpad,
         ctx: &mut TxContext
@@ -35,7 +34,6 @@ module swift_nft::launchpad_sale {
             born: 0,
             nft_index: vector::empty()
         };
-        let reg_id = object::id(&reg);
         let new_sale = Sale<Item, Launchpad> {
             id: object::new(ctx),
             whitelist,
@@ -43,12 +41,6 @@ module swift_nft::launchpad_sale {
             nfts: object_table::new<ID, Item>(ctx),
             launchpad
         };
-        let sale_id = object::id(&new_sale);
-
-        launchpad_event::sale_create_event<Item, Launchpad>(sale_id, reg_id, whitelist);
-
-        // list_muti_item(&mut new_sale, nfts);
-
         return new_sale
     }
 

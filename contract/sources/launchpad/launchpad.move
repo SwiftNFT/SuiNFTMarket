@@ -50,6 +50,7 @@ module swift_nft::launchpad {
     const ESTwoalesMisMatch: u64 = 4;
     const EOperateNotAuth: u64 = 5;
     const ENotAuthGetWhiteList: u64 = 6;
+    const ESlingshotNotLive: u64 = 7;
 
 
     fun init(ctx: &mut TxContext) {
@@ -62,7 +63,6 @@ module swift_nft::launchpad {
 
     public entry fun create_multi_sales_launchpad<Item: key+store, CoinType>(
         manager: &SwiftNftLaunchpadManagerCap,
-        collection: ID,
         admin: address,
         live: bool,
         whitelists: vector<bool>,
@@ -74,6 +74,7 @@ module swift_nft::launchpad {
         ctx: &mut TxContext
     ) {
         let result = vector::empty<launchpad_sale::Sale<Item, Launchpad<Item, CoinType>>>();
+        let sale_ids = vector::empty<ID>();
         while (vector::length(&prices) > 0) {
             let start_time = vector::pop_back(&mut start_times);
             let end_time = vector::pop_back(&mut end_times);
@@ -93,19 +94,21 @@ module swift_nft::launchpad {
                 claimed: vec_map::empty(),
                 balance: coin::zero<CoinType>(ctx),
             };
-            launchpad_event::launchpad_created_event<Item, Launchpad<Item, CoinType>>(
-                object::id(&launchpad),
-                start_time,
-                end_time,
-                max_count,
-                allow_count,
-                price,
-                tx_context::sender(ctx)
-            );
+            let launchpad_id = object::id(&launchpad);
             let new_sale = launchpad_sale::create_sale<Item, Launchpad<Item, CoinType>>(whitelist, launchpad, ctx);
+            let sale_id = object::id(&new_sale);
+            launchpad_event::sale_create_event(sale_id, launchpad_id, whitelist, start_time, end_time, price);
+            vector::push_back(&mut sale_ids, sale_id);
             vector::push_back(&mut result, new_sale);
         };
-        launchpad_slingshot::create_slingshot<Item, Launchpad<Item, CoinType>>(collection, admin, live, manager.market_fee, result, ctx);
+        let slingshot_id = launchpad_slingshot::create_slingshot<Item, Launchpad<Item, CoinType>>(admin, live, manager.market_fee, result, ctx);
+        launchpad_event::slingshot_create_event(
+            slingshot_id,
+            admin,
+            live,
+            manager.market_fee,
+            sale_ids,
+        );
     }
 
     public entry fun remove_sale<Item: key+store, CoinType>(
@@ -128,7 +131,7 @@ module swift_nft::launchpad {
             i = i + 1
         };
 
-        launchpad_event::sale_remove_event<Item, Launchpad<Item, CoinType>>(
+        launchpad_event::sale_remove_event(
             object::id(slingshot),
             sale_ids,
             tx_context::sender(ctx)
@@ -218,6 +221,8 @@ module swift_nft::launchpad {
         buyer_funds: &mut Coin<CoinType>,
         ctx: &mut TxContext
     ) {
+        let live = launchpad_slingshot::borrow_live(slingshot);
+        assert!(live, ESlingshotNotLive);
         let addr = sender(ctx);
         let market_fee = launchpad_slingshot::borrow_market_fee(slingshot);
         let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
