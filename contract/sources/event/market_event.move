@@ -7,6 +7,7 @@ module swift_nft::market_event {
 
     struct MarketCreatedEvent has copy, drop {
         market_id: ID,
+        collection_list: ID,
         owner: address,
     }
 
@@ -54,10 +55,10 @@ module swift_nft::market_event {
         price: u64,
     }
 
-    public(friend) fun market_created_event(market_id: ID,
-                                            owner: address) {
+    public(friend) fun market_created_event(market_id: ID, collection_list: ID, owner: address) {
         event::emit(MarketCreatedEvent {
             market_id,
+            collection_list,
             owner
         })
     }

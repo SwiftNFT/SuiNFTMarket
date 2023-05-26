@@ -149,7 +149,7 @@ module swift_nft::launchpad {
         assert!(admin == tx_context::sender(ctx), EOperateNotAuth);
         let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
         let market = launchpad_sale::get_launchpad(borrow_sale);
-        assert!(market.start_time >= clock::timestamp_ms(clock), ETimeMismatch);
+        assert!(market.start_time > clock::timestamp_ms(clock), ETimeMismatch);
         let borrow_mut_sale = launchpad_slingshot::borrow_mut_sales(slingshot, sale_id);
         let mut_market = launchpad_sale::get_mut_market<Item, Launchpad<Item, CoinType>>(borrow_mut_sale);
 

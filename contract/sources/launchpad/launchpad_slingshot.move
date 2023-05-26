@@ -121,7 +121,7 @@ module swift_nft::launchpad_slingshot {
         slingshot.admin = admin
     }
 
-    public fun modity_status<Item: key+store, Launchpad: store>(
+    public fun modify_status<Item: key+store, Launchpad: store>(
         slingshot: &mut Slingshot<Item, Launchpad>,
         status: bool,
         ctx: &mut TxContext

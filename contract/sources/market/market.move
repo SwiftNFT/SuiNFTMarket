@@ -28,7 +28,7 @@ module swift_nft::market {
 
     //let explicit_u8 = 1u8;
     ///Some basic information about Item's listing  in the market
-    struct Listing<phantom Item: store + key> has store, key {
+    struct Listing has store, key {
         id: UID,
         /// The Item of price
         price: u64,
@@ -69,15 +69,19 @@ module swift_nft::market {
         id: UID,
         /// version of market
         version: u64,
-        ///collection set of the marketplace
-        collection: vec_map::VecMap<String, ID>,
         ///marketplace fee collected by marketplace
         balance: Coin<SUI>,
         ///marketplace fee  of the marketplace
         fee: u64,
     }
 
-    struct AdminCap has key {
+    struct CollectionList has key {
+        id: UID,
+        ///collection set of the marketplace
+        collection: vec_map::VecMap<String, ID>,
+    }
+
+    struct AdminCap has key, store {
         id: UID,
     }
 
@@ -86,22 +90,27 @@ module swift_nft::market {
         let market = Marketplace {
             id: object::new(ctx),
             version: VERSION,
-            collection: vec_map::empty<String, ID>(),
             balance: coin::zero<SUI>(ctx),
             fee: 150,
         };
         // Claim the `Publisher` for the package!
         let publisher = package::claim(otw, ctx);
         transfer::public_transfer(publisher, sender(ctx));
-
-        market_event::market_created_event(object::id(&market), tx_context::sender(ctx));
+        let collection_list = CollectionList{
+            id: object::new(ctx),
+            collection: vec_map::empty<String, ID>(),
+        };
+        market_event::market_created_event(object::id(&market), object::id(&collection_list), tx_context::sender(ctx));
 
         transfer::share_object(market);
-        transfer::transfer(AdminCap { id: object::new(ctx) }, tx_context::sender(ctx));
+        transfer::share_object(collection_list);
+        transfer::public_transfer(AdminCap { id: object::new(ctx) }, tx_context::sender(ctx));
     }
 
     ///Creating a collection
     public entry fun create_collection<Item: key+store>(
+        _admin: &AdminCap,
+        collection_list: &mut CollectionList,
         market: &mut Marketplace,
         name: vector<u8>,
         description: vector<u8>,
@@ -133,7 +142,7 @@ module swift_nft::market {
         let collection_id = object::id(&collection);
         market_event::collection_created_event(collection_id, tx_context::sender(ctx));
         let collection_type_name = type_name::into_string(type_name::get<Item>());
-        vec_map::insert(&mut market.collection, collection_type_name, object::id(&collection));
+        vec_map::insert(&mut collection_list.collection, collection_type_name, object::id(&collection));
         transfer::share_object(collection);
     }
 
@@ -144,12 +153,10 @@ module swift_nft::market {
         price: u64,
         ctx: &mut TxContext
     ) {
-
         let item_id = object::id(&item);
         let id = object::new(ctx);
-
-        ofield::add(&mut id, true, item);
-        let listing = Listing<Item> {
+        ofield::add(&mut id, item_id, item);
+        let listing = Listing {
             id,
             price,
             seller: tx_context::sender(ctx),
@@ -160,20 +167,21 @@ module swift_nft::market {
     }
 
     ///Listing NFT in the collection
-    public entry fun list_vector<Item: store+key>(
+    public fun batch_list<Item: store+key>(
         collection: &mut Collection<Item>,
         items: vector<Item>,
-        price: u64,
+        prices: vector<u64>,
         ctx: &mut TxContext
     ) {
         let length = vector::length(&items);
         let i = 0;
         while (i < length) {
             let item = vector::pop_back(&mut items);
+            let price = vector::pop_back(&mut prices);
             let item_id = object::id(&item);
             let id = object::new(ctx);
             ofield::add(&mut id, true, item);
-            let listing = Listing<Item> {
+            let listing = Listing {
                 id,
                 price,
                 seller: tx_context::sender(ctx),
@@ -193,7 +201,7 @@ module swift_nft::market {
         price: u64,
         ctx: &mut TxContext) {
         let collection_id = object::id(collection);
-        let listing = dynamic_object_field::borrow_mut<ID, Listing<Item>>(&mut collection.id, item_id);
+        let listing = dynamic_object_field::borrow_mut<ID, Listing>(&mut collection.id, item_id);
         assert!(listing.seller == tx_context::sender(ctx), err_code::not_auth_operator());
         listing.price = price;
         market_event::item_adjust_price_event(collection_id, object::id(listing), tx_context::sender(ctx), price);
@@ -206,18 +214,16 @@ module swift_nft::market {
         ctx: &mut TxContext
     ): Item {
         //Get the list from the collection
-
-        let listing = ofield::remove<ID, Listing<Item>>(&mut collection.id, item_id);
+        let listing = ofield::remove<ID, Listing>(&mut collection.id, item_id);
         let listing_id = object::id(&listing);
-        //unpack
-        let Listing<Item> {
+        let Listing {
             id,
             price,
             seller,
         } = listing;
         //Determine the owner's authority
         assert!(tx_context::sender(ctx) == seller, err_code::not_auth_operator());
-        let item = ofield::remove<bool, Item>(&mut id, true);
+        let item = ofield::remove<ID, Item>(&mut id, item_id);
         //emit event
         market_event::item_delisted_event(object::id(collection), item_id, listing_id, tx_context::sender(ctx), price);
 
@@ -235,9 +241,8 @@ module swift_nft::market {
         ctx: &mut TxContext
     ): Item {
         assert!(market.version == VERSION, EWrongVersion);
-        let listing = ofield::remove<ID, Listing<Item>>(&mut collection.id, item_id);
-        // let listing_id = object::id(&listing);
-        let Listing<Item> {
+        let listing = ofield::remove<ID, Listing>(&mut collection.id, item_id);
+        let Listing {
             id,
             price,
             seller,
@@ -259,7 +264,7 @@ module swift_nft::market {
         coin::join(&mut market.balance, market_value);
         coin::join(&mut collection.balance, collection_value);
 
-        let item = ofield::remove<bool, Item>(&mut id, true);
+        let item = ofield::remove<ID, Item>(&mut id, item_id);
 
         market_event::item_buy_event(object::id(collection), item_id, seller, sender(ctx), price);
 
@@ -268,17 +273,16 @@ module swift_nft::market {
     }
 
     ///purcahse muti NFT
-    public entry fun buy_muti_item_script<Item: store+key>(
+    public entry fun buy_multi_item_script<Item: store+key>(
         market: &mut Marketplace,
         collection: &mut Collection<Item>,
         item_ids: vector<ID>,
-        pay_list: vector<Coin<SUI>>,
+        paid: Coin<SUI>,
         receiver: address,
         ctx: &mut TxContext
     ) {
-        assert!(market.version == VERSION, EWrongVersion);
-        let paid = vector::pop_back(&mut pay_list);
-        pay::join_vec<SUI>(&mut paid, pay_list);
+        // let paid = vector::pop_back(&mut pay_list);
+        // pay::join_vec<SUI>(&mut paid, pay_list);
         while (vector::length(&item_ids) != 0) {
             let ids = vector::pop_back(&mut item_ids);
             buy_and_take_script<Item>(market, collection, ids, &mut paid, receiver, ctx);
@@ -294,7 +298,6 @@ module swift_nft::market {
         receiver: address,
         ctx: &mut TxContext
     ) {
-        assert!(market.version == VERSION, EWrongVersion);
         transfer::public_transfer(buy_script<Item>(market, collection, item_id, paid, ctx), receiver)
     }
 
@@ -311,16 +314,16 @@ module swift_nft::market {
     }
 
     public entry fun collect_profits(
+        _admin: &AdminCap,
         market: &mut Marketplace,
-        _receiver: address,
+        receiver: address,
         ctx: &mut TxContext
     ) {
         assert!(market.version == VERSION, EWrongVersion);
         let balances = coin::value(&mut market.balance);
         let coins = coin::split(&mut market.balance, balances, ctx);
-        transfer::public_transfer(coins, tx_context::sender(ctx));
+        transfer::public_transfer(coins, receiver);
     }
-
 
     public entry fun delist_take<Item: key + store>(
         collection: &mut Collection<Item>,
@@ -390,12 +393,20 @@ module swift_nft::market {
     }
 
     public entry fun update_market_fee(
+        _admin: &AdminCap,
         market: &mut Marketplace,
         fee: u64,
         _ctx: &mut TxContext
     ) {
         assert!(market.version == VERSION, EWrongVersion);
         market.fee = fee
+    }
+
+    public entry fun change_admin(
+        admin: AdminCap,
+        receiver: address,
+    ){
+        transfer::public_transfer(admin, receiver);
     }
 
     public fun to_string_vector(
