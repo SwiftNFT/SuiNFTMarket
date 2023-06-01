@@ -2,56 +2,60 @@
 // SPDX-License-Identifier: Apache-2.0
 module swift_nft::merkle_proof {
     use std::vector;
-    use std::hash;
+    use sui::hash;
 
 
     const ETwoVectorLengthMismatch: u64 = 0;
 
-    public fun verify(proof: vector<vector<u8>>, root: vector<u8>, leaf: vector<u8>): bool {
-        process_proof(proof, leaf) == root
+    public entry fun verify(proof: vector<vector<u8>>, root: vector<u8>, leaf: vector<u8>): bool {
+        assert!(process_proof(proof, leaf) == root, ETwoVectorLengthMismatch);
+        true
     }
 
 
     fun process_proof(proof: vector<vector<u8>>, leaf: vector<u8>): vector<u8> {
-        let computedHash = leaf;
+        let computed_hash = leaf;
         let i = 0;
         let length_proof = vector::length(&proof);
-        while (i != length_proof) {
-            computedHash = hash_hair(computedHash, *vector::borrow(&proof, i));
+        while (i < length_proof) {
+            computed_hash = hash_hair(computed_hash, *vector::borrow(&proof, i));
             i = i + 1
         };
-        computedHash
+        computed_hash
     }
 
-    fun compare(a: vector<u8>, b: vector<u8>): bool {
-        let length_a = vector::length(&a);
-        let length_b = vector::length(&b);
-        assert!(length_b == length_a, ETwoVectorLengthMismatch);
+    public fun lt(a: &vector<u8>, b: &vector<u8>): bool {
         let i = 0;
-        while (i < length_a) {
-            let tep_a = *vector::borrow(&a, i);
-            let tep_b = *vector::borrow(&b, i);
-            if (tep_b < tep_a) {
-                return true
-            }else if (tep_a < tep_b) {
-                return false
-            };
-            i = i + 1
+        let len = vector::length(a);
+        assert!(len == vector::length(b), ETwoVectorLengthMismatch);
+
+        while (i < len) {
+            let aa = *vector::borrow(a, i);
+            let bb = *vector::borrow(b, i);
+            if (aa < bb) return true;
+            if (aa > bb) return false;
+            i = i + 1;
         };
-        return true
+        false
     }
 
 
     fun hash_hair(a: vector<u8>, b: vector<u8>): vector<u8> {
-        return if (compare(a, b)) {
-            efficient_hash(a, b)
-        }else {
-            efficient_hash(b, a)
-        }
+        if (lt(&a, &b)) efficient_hash(a, b) else efficient_hash(b, a)
     }
 
     fun efficient_hash(a: vector<u8>, b: vector<u8>): vector<u8> {
         vector::append(&mut a, b);
-        hash::sha3_256(a)
+        hash::keccak256(&a)
     }
+
+    #[test]
+    fun test_verify() {
+        let proof = vector::empty<vector<u8>>();
+        vector::push_back(&mut proof, x"f99692a8fccf12eb2bf6399f23bf9379e38a98367a75e250d53eb727c1385624");
+        let root = x"59d3298db60c8c3ea35d3de0f43e297df7f27d8c3ba02555bcd7a2eee106aace";
+        let leaf = x"45db79b20469c3d6b3c40ea3e4e76603cca6981e7765382ffa4cb1336154efe5";
+        assert!(verify(proof, root, leaf), 0);
+    }
+
 }

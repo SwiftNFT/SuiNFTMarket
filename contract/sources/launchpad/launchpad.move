@@ -19,7 +19,7 @@ module swift_nft::launchpad {
     use sui::vec_map::VecMap;
     use sui::vec_map;
     use sui::transfer::public_transfer;
-    use swift_nft::launchpad_whitelist::{check_whitelist, Activity, ActivityList, check_whitelist_mut};
+    use swift_nft::launchpad_whitelist::{check_whitelist, Activity, ActivityList};
     use swift_nft::launchpad_whitelist;
     use swift_nft::launchpad_sale::modify_whitelist_status;
 
@@ -292,30 +292,6 @@ module swift_nft::launchpad {
         let whitelist = launchpad_sale::whitelist_status(borrow_sale);
         if (whitelist == true) {
             let is_whitelist = check_whitelist(activity, proof, ctx);
-            assert!(is_whitelist, ENotAuthGetWhiteList);
-        };
-        let i = 0;
-        while (i < count) {
-            purchase(slingshot, sale_id, clock, buyer_funds, ctx);
-            i = i + 1;
-        }
-    }
-
-
-    public entry fun whitelist_purchase_mut<Item: key+store, CoinType>(
-        slingshot: &mut Slingshot<Item, Launchpad<Item, CoinType>>,
-        sale_id: ID,
-        count: u64,
-        clock: &Clock,
-        activity: &mut Activity,
-        proof: vector<vector<u8>>,
-        buyer_funds: &mut Coin<CoinType>,
-        ctx: &mut TxContext
-    ) {
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
-        let whitelist = launchpad_sale::whitelist_status(borrow_sale);
-        if (whitelist == true) {
-            let is_whitelist = check_whitelist_mut(activity, proof, ctx);
             assert!(is_whitelist, ENotAuthGetWhiteList);
         };
         let i = 0;
