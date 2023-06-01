@@ -3,7 +3,6 @@
 module swift_nft::market {
     use sui::object::{Self, ID, UID};
     use sui::url::{Self, Url};
-    use std::ascii::String;
     use std::string;
     use sui::sui::SUI;
     use sui::coin::{Self, Coin};
@@ -18,6 +17,8 @@ module swift_nft::market {
     use std::type_name;
     use sui::dynamic_object_field;
     use sui::package;
+    use std::string::String;
+    use std::ascii;
 
     // One-Time-Witness for the module.
     struct MARKET has drop {}
@@ -78,7 +79,7 @@ module swift_nft::market {
     struct CollectionList has key {
         id: UID,
         ///collection set of the marketplace
-        collection: vec_map::VecMap<String, ID>,
+        collection: vec_map::VecMap<ascii::String, ID>,
     }
 
     struct AdminCap has key, store {
@@ -98,7 +99,7 @@ module swift_nft::market {
         transfer::public_transfer(publisher, sender(ctx));
         let collection_list = CollectionList{
             id: object::new(ctx),
-            collection: vec_map::empty<String, ID>(),
+            collection: vec_map::empty<ascii::String, ID>(),
         };
         market_event::market_created_event(object::id(&market), object::id(&collection_list), tx_context::sender(ctx));
 
@@ -112,9 +113,9 @@ module swift_nft::market {
         _admin: &AdminCap,
         collection_list: &mut CollectionList,
         market: &mut Marketplace,
-        name: vector<u8>,
-        description: vector<u8>,
-        tags: vector<vector<u8>>,
+        name:String,
+        description: String,
+        tags: vector<String>,
         logo_image: vector<u8>,
         featured_image: vector<u8>,
         website: vector<u8>,
@@ -126,9 +127,9 @@ module swift_nft::market {
         // Initialize some basic information about collection
         let collection = Collection<Item> {
             id: object::new(ctx),
-            name: string::utf8(name),
-            description: string::utf8(description),
-            tags: to_string_vector(&mut tags),
+            name,
+            description,
+            tags,
             logo_image: url::new_unsafe_from_bytes(logo_image),
             featured_image: url::new_unsafe_from_bytes(featured_image),
             website: url::new_unsafe_from_bytes(website),
@@ -180,7 +181,7 @@ module swift_nft::market {
             let price = vector::pop_back(&mut prices);
             let item_id = object::id(&item);
             let id = object::new(ctx);
-            ofield::add(&mut id, true, item);
+            ofield::add(&mut id, item_id, item);
             let listing = Listing {
                 id,
                 price,
@@ -400,6 +401,15 @@ module swift_nft::market {
     ) {
         assert!(market.version == VERSION, EWrongVersion);
         market.fee = fee
+    }
+
+    public entry fun delete_collection(
+        _admin: &AdminCap,
+        collection_list: &mut CollectionList,
+        collection_type: ascii::String,
+    ){
+        let collections = collection_list.collection;
+        vec_map::remove(&mut collections, &collection_type);
     }
 
     public entry fun change_admin(

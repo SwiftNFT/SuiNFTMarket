@@ -3,6 +3,8 @@
 module swift_nft::launchpad_event {
     use sui::object::ID;
     use sui::event;
+    use sui::url::Url;
+    use std::string::String;
 
     struct SlingshotCreatedEvent has copy, drop {
         slingshot_id: ID,
@@ -30,7 +32,8 @@ module swift_nft::launchpad_event {
     struct ActivityCreatedEvent has copy, drop {
         activity_id: ID,
         sale_id: ID,
-        root: vector<u8>,
+        root: String,
+        url: Url,
     }
 
     public fun slingshot_create_event(
@@ -69,11 +72,12 @@ module swift_nft::launchpad_event {
         })
     }
 
-    public fun activity_created_event(activity_id: ID, sale_id: ID, root: vector<u8>) {
+    public fun activity_created_event(activity_id: ID, sale_id: ID, root: String, url: Url) {
         event::emit(ActivityCreatedEvent {
             activity_id,
             sale_id,
-            root
+            root,
+            url
         })
     }
 }
