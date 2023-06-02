@@ -32,7 +32,7 @@ module swift_nft::launchpad_event {
     struct ActivityCreatedEvent has copy, drop {
         activity_id: ID,
         sale_id: ID,
-        root: String,
+        root: vector<u8>,
         url: Url,
     }
 
@@ -72,7 +72,7 @@ module swift_nft::launchpad_event {
         })
     }
 
-    public fun activity_created_event(activity_id: ID, sale_id: ID, root: String, url: Url) {
+    public fun activity_created_event(activity_id: ID, sale_id: ID, root: vector<u8>, url: Url) {
         event::emit(ActivityCreatedEvent {
             activity_id,
             sale_id,

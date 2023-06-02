@@ -13,7 +13,7 @@ module swift_nft::launchpad_whitelist {
     use sui::vec_map;
     use sui::transfer::public_share_object;
     use std::string::utf8;
-    use sui::hash;
+    use std::hash;
 
     friend swift_nft::launchpad;
     friend swift_nft::launchpad_v2;
@@ -53,7 +53,7 @@ module swift_nft::launchpad_whitelist {
             url
         };
         vec_map::insert(&mut activity_list.whitelist, sale_id, object::id(&activity));
-        launchpad_event::activity_created_event(object::id(&activity), sale_id, utf8(root), url);
+        launchpad_event::activity_created_event(object::id(&activity), sale_id, root, url);
         transfer::share_object(activity);
     }
 
@@ -73,7 +73,7 @@ module swift_nft::launchpad_whitelist {
         ctx: &TxContext
     ): bool {
         let sender = address::to_bytes(sender(ctx));
-        let leaf = hash::keccak256(&sender);
+        let leaf = hash::sha3_256(sender);
         merkle_proof::verify(proof, activity.root, leaf)
     }
 }
