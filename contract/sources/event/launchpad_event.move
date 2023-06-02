@@ -4,7 +4,6 @@ module swift_nft::launchpad_event {
     use sui::object::ID;
     use sui::event;
     use sui::url::Url;
-    use std::string::String;
 
     struct SlingshotCreatedEvent has copy, drop {
         slingshot_id: ID,

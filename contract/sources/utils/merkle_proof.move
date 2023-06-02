@@ -6,7 +6,7 @@ module swift_nft::merkle_proof {
 
     const ETwoVectorLengthMismatch: u64 = 0;
 
-    public entry fun verify(proof: vector<vector<u8>>, root: vector<u8>, leaf: vector<u8>): bool {
+    public fun verify(proof: vector<vector<u8>>, root: vector<u8>, leaf: vector<u8>): bool {
         process_proof(proof, leaf) == root
     }
 

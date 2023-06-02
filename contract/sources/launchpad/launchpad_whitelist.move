@@ -12,7 +12,6 @@ module swift_nft::launchpad_whitelist {
     use sui::url;
     use sui::vec_map;
     use sui::transfer::public_share_object;
-    use std::string::utf8;
     use std::hash;
 
     friend swift_nft::launchpad;

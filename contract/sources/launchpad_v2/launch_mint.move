@@ -188,7 +188,7 @@ module swift_nft::launchpad_v2 {
         assert!(clock::timestamp_ms(clock) <= launchpad.end_time, ETimeMismatch);
         assert!(launchpad.minted_count < launchpad.max_count, EMintInsufficient);
         let market_price = launchpad.price * market_fee / 100;
-        let price = launchpad.price - market_fee;
+        let price = launchpad.price - market_price;
         if (market_price > 0) {
             pay::split_and_transfer(buyer_funds, market_price, sender(ctx), ctx);
         };
