@@ -1,6 +1,6 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::merkle_proof {
+module swift_market::merkle_proof {
     use std::vector;
     use std::hash;
 

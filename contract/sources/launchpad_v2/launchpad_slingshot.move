@@ -1,6 +1,6 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::launchpad_v2_slingshot {
+module swift_market::launchpad_v2_slingshot {
 
     use sui::object::{Self, UID, ID};
     use sui::tx_context::TxContext;

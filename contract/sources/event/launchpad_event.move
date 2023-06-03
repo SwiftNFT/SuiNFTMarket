@@ -1,6 +1,6 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::launchpad_event {
+module swift_market::launchpad_event {
     use sui::object::ID;
     use sui::event;
     use sui::url::Url;

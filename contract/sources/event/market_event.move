@@ -1,9 +1,9 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::market_event {
+module swift_market::market_event {
     use sui::object::ID;
     use sui::event;
-    friend swift_nft::market;
+    friend swift_market::market;
 
     struct MarketCreatedEvent has copy, drop {
         market_id: ID,

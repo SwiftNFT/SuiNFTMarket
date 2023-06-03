@@ -1,6 +1,6 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::market {
+module swift_market::market {
     use sui::object::{Self, ID, UID};
     use sui::url::{Self, Url};
     use std::string;
@@ -11,8 +11,8 @@ module swift_nft::market {
     use sui::dynamic_object_field as ofield;
     use sui::pay;
     use std::vector;
-    use swift_nft::market_event;
-    use swift_nft::err_code;
+    use swift_market::market_event;
+    use swift_market::err_code;
     use sui::vec_map;
     use std::type_name;
     use sui::dynamic_object_field;

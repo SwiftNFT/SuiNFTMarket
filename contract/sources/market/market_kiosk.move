@@ -1,3 +1,3 @@
-module swift_nft::market_kiosk {
+module swift_market::market_kiosk {
 
 }

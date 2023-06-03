@@ -1,13 +1,13 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::launchpad_sale {
+module swift_market::launchpad_sale {
     use sui::object::{Self, ID, UID};
     use sui::tx_context::{TxContext};
     use std::vector;
     use sui::object_table::{Self, ObjectTable};
-    use swift_nft::random;
+    use swift_market::random;
 
-    friend swift_nft::launchpad;
+    friend swift_market::launchpad;
 
 
     struct Sale<phantom Item: key+store, Launchpad: store>has key, store {

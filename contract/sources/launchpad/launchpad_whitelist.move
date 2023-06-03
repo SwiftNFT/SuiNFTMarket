@@ -1,21 +1,21 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::launchpad_whitelist {
+module swift_market::launchpad_whitelist {
     use sui::object::{UID, ID};
     use sui::tx_context::{TxContext, sender};
     use sui::object;
     use sui::transfer;
-    use swift_nft::merkle_proof;
+    use swift_market::merkle_proof;
     use sui::address;
-    use swift_nft::launchpad_event;
+    use swift_market::launchpad_event;
     use sui::url::Url;
     use sui::url;
     use sui::vec_map;
     use sui::transfer::public_share_object;
     use std::hash;
 
-    friend swift_nft::launchpad;
-    friend swift_nft::launchpad_v2;
+    friend swift_market::launchpad;
+    friend swift_market::launchpad_v2;
 
     struct Activity has key, store {
         id: UID,

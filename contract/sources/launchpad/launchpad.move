@@ -1,16 +1,16 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::launchpad {
+module swift_market::launchpad {
     use sui::object::{UID, ID};
     use sui::coin::Coin;
     use std::vector;
     use sui::tx_context::{TxContext, sender};
     use sui::object;
     use sui::tx_context;
-    use swift_nft::launchpad_event;
-    use swift_nft::launchpad_sale;
-    use swift_nft::launchpad_slingshot;
-    use swift_nft::launchpad_slingshot::{Slingshot};
+    use swift_market::launchpad_event;
+    use swift_market::launchpad_sale;
+    use swift_market::launchpad_slingshot;
+    use swift_market::launchpad_slingshot::{Slingshot};
     use sui::clock;
     use sui::clock::Clock;
     use sui::transfer;
@@ -19,9 +19,9 @@ module swift_nft::launchpad {
     use sui::vec_map::VecMap;
     use sui::vec_map;
     use sui::transfer::public_transfer;
-    use swift_nft::launchpad_whitelist::{check_whitelist, Activity, ActivityList};
-    use swift_nft::launchpad_whitelist;
-    use swift_nft::launchpad_sale::modify_whitelist_status;
+    use swift_market::launchpad_whitelist::{check_whitelist, Activity, ActivityList};
+    use swift_market::launchpad_whitelist;
+    use swift_market::launchpad_sale::modify_whitelist_status;
 
     struct Launchpad<phantom Item, phantom CoinType>has key, store {
         id: UID,
