@@ -1,6 +1,6 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::random {
+module swift_market::random {
     use std::hash;
     use std::vector;
 

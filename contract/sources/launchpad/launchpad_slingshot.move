@@ -1,15 +1,15 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::launchpad_slingshot {
+module swift_market::launchpad_slingshot {
 
     use sui::object::{Self, UID, ID};
     use sui::object_table::{Self, ObjectTable};
-    use swift_nft::launchpad_sale::Sale;
+    use swift_market::launchpad_sale::Sale;
     use sui::tx_context::TxContext;
     use sui::transfer;
     use std::vector;
     use sui::tx_context;
-    friend swift_nft::launchpad;
+    friend swift_market::launchpad;
 
 
     struct Slingshot<phantom Item: key+store, Launchpad: store> has key, store {
@@ -91,9 +91,7 @@ module swift_nft::launchpad_slingshot {
     public fun borrow_sales<Item: key+store, Launchpad: store>(
         slingshot: &Slingshot<Item, Launchpad>,
         sales_id: ID,
-        ctx: &mut TxContext
     ): &Sale<Item, Launchpad> {
-        assert!(slingshot.admin == tx_context::sender(ctx), EOperateNotAuth);
         // slingshot_event::sales_borrow_event<Item, Launchpad>(object::id(slingshot), tx_context::sender(ctx));
         object_table::borrow(&slingshot.sales, sales_id)
     }
@@ -121,7 +119,7 @@ module swift_nft::launchpad_slingshot {
         slingshot.admin = admin
     }
 
-    public fun modity_status<Item: key+store, Launchpad: store>(
+    public fun modify_status<Item: key+store, Launchpad: store>(
         slingshot: &mut Slingshot<Item, Launchpad>,
         status: bool,
         ctx: &mut TxContext

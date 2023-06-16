@@ -1,4 +1,4 @@
-module swift_nft::err_code {
+module swift_market::err_code {
 
     const Prefix: u64=0x0000;
     //market  errcode

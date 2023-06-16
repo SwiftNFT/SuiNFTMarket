@@ -1,3 +1,7 @@
 .idea
 contract/build
 sui.log*
+
+node_modules
+*-lock.json
+.env

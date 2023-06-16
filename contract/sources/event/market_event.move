@@ -1,12 +1,13 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::market_event {
+module swift_market::market_event {
     use sui::object::ID;
     use sui::event;
-    friend swift_nft::market;
+    use std::ascii::String;
 
     struct MarketCreatedEvent has copy, drop {
         market_id: ID,
+        collection_list: ID,
         owner: address,
     }
 
@@ -21,6 +22,9 @@ module swift_nft::market_event {
         listing_id: ID,
         operator: address,
         price: u64,
+        nft_type: String,
+        ft_type: String,
+        is_new_collection: bool
     }
 
     struct ItemBuyEvent has copy, drop {
@@ -28,6 +32,8 @@ module swift_nft::market_event {
         item_id: ID,
         from: address,
         to: address,
+        nft_type: String,
+        ft_type: String,
         price: u64,
     }
 
@@ -35,6 +41,8 @@ module swift_nft::market_event {
         collection_id: ID,
         from: address,
         to: address,
+        nft_type: String,
+        ft_type: String,
         price: u64,
     }
 
@@ -43,83 +51,84 @@ module swift_nft::market_event {
         item_id: ID,
         listing_id: ID,
         operator: address,
+        nft_type: String,
+        ft_type: String,
         price: u64,
 
     }
 
     struct ItemAdjustPriceEvent has copy, drop {
         collection_id: ID,
-        listing_id: ID,
+        item_id: ID,
         operator: address,
+        nft_type: String,
+        ft_type: String,
         price: u64,
     }
 
-    public(friend) fun market_created_event(market_id: ID,
-                                            owner: address) {
+    public fun market_created_event(market_id: ID, collection_list: ID, owner: address) {
         event::emit(MarketCreatedEvent {
             market_id,
+            collection_list,
             owner
         })
     }
 
-    public(friend) fun collection_created_event(collection_id: ID, creator_address: address) {
-        event::emit(CollectionCreatedEvent {
-            collection_id,
-            creator_address
-        })
-    }
-
-    public(friend) fun item_list_event(collection_id: ID, item_id: ID, listing_id: ID, operator: address, price: u64) {
+    public fun item_list_event(collection_id: ID, item_id: ID, listing_id: ID, operator: address, price: u64, nft_type: String, ft_type: String, is_new_collection: bool) {
         event::emit(ItemListedEvent {
             collection_id,
             item_id,
             listing_id,
             operator,
-            price
+            price,
+            nft_type,
+            ft_type,
+            is_new_collection
         })
     }
 
-    public(friend) fun item_buy_event(collection_id: ID, item_id: ID, from: address, to: address, price: u64) {
+    public fun item_buy_event(collection_id: ID, item_id: ID, from: address, to: address, nft_type: String, ft_type: String, price: u64) {
         event::emit(ItemBuyEvent {
             collection_id,
             item_id,
             from,
             to,
+            nft_type,
+            ft_type,
             price
         })
     }
 
-    public(friend) fun collection_withdrawal(collection_id: ID, from: address, to: address, price: u64) {
+    public fun collection_withdrawal(collection_id: ID, from: address, to: address, nft_type: String, ft_type: String, price: u64) {
         event::emit(CollectionWithdrawalEvent {
             collection_id,
             from,
             to,
+            nft_type,
+            ft_type,
             price
         })
     }
 
-    public(friend) fun item_delisted_event(collection_id: ID,
-                                           item_id: ID,
-                                           listing_id: ID,
-                                           operator: address,
-                                           price: u64) {
+    public fun item_delisted_event(collection_id: ID, item_id: ID, listing_id: ID, operator: address, nft_type: String, ft_type: String, price: u64) {
         event::emit(ItemDeListedEvent {
             collection_id,
             item_id,
             listing_id,
             operator,
+            nft_type,
+            ft_type,
             price,
         })
     }
 
-    public(friend) fun item_adjust_price_event(collection_id: ID,
-                                               listing_id: ID,
-                                               operator: address,
-                                               price: u64) {
+    public fun item_adjust_price_event(collection_id: ID, item_id: ID, operator: address, nft_type: String, ft_type: String, price: u64) {
         event::emit(ItemAdjustPriceEvent {
             collection_id,
-            listing_id,
+            item_id,
             operator,
+            nft_type,
+            ft_type,
             price
         })
     }

@@ -1,8 +1,9 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::launchpad_event {
+module swift_market::launchpad_event {
     use sui::object::ID;
     use sui::event;
+    use sui::url::Url;
 
     struct SlingshotCreatedEvent has copy, drop {
         slingshot_id: ID,
@@ -31,6 +32,7 @@ module swift_nft::launchpad_event {
         activity_id: ID,
         sale_id: ID,
         root: vector<u8>,
+        url: Url,
     }
 
     public fun slingshot_create_event(
@@ -69,11 +71,12 @@ module swift_nft::launchpad_event {
         })
     }
 
-    public fun activity_created_event(activity_id: ID, sale_id: ID, root: vector<u8>) {
+    public fun activity_created_event(activity_id: ID, sale_id: ID, root: vector<u8>, url: Url) {
         event::emit(ActivityCreatedEvent {
             activity_id,
             sale_id,
-            root
+            root,
+            url
         })
     }
 }

@@ -1,16 +1,16 @@
 // Copyright 2019-2022 SwiftNFT Systems
 // SPDX-License-Identifier: Apache-2.0
-module swift_nft::launchpad {
+module swift_market::launchpad {
     use sui::object::{UID, ID};
     use sui::coin::Coin;
     use std::vector;
     use sui::tx_context::{TxContext, sender};
     use sui::object;
     use sui::tx_context;
-    use swift_nft::launchpad_event;
-    use swift_nft::launchpad_sale;
-    use swift_nft::launchpad_slingshot;
-    use swift_nft::launchpad_slingshot::{Slingshot};
+    use swift_market::launchpad_event;
+    use swift_market::launchpad_sale;
+    use swift_market::launchpad_slingshot;
+    use swift_market::launchpad_slingshot::{Slingshot};
     use sui::clock;
     use sui::clock::Clock;
     use sui::transfer;
@@ -19,9 +19,9 @@ module swift_nft::launchpad {
     use sui::vec_map::VecMap;
     use sui::vec_map;
     use sui::transfer::public_transfer;
-    use swift_nft::launchpad_whitelist::{check_whitelist, Activity};
-    use swift_nft::launchpad_whitelist;
-    use swift_nft::launchpad_sale::modify_whitelist_status;
+    use swift_market::launchpad_whitelist::{check_whitelist, Activity, ActivityList};
+    use swift_market::launchpad_whitelist;
+    use swift_market::launchpad_sale::modify_whitelist_status;
 
     struct Launchpad<phantom Item, phantom CoinType>has key, store {
         id: UID,
@@ -147,9 +147,9 @@ module swift_nft::launchpad {
     ) {
         let admin = launchpad_slingshot::borrow_admin(slingshot);
         assert!(admin == tx_context::sender(ctx), EOperateNotAuth);
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
+        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id);
         let market = launchpad_sale::get_launchpad(borrow_sale);
-        assert!(market.start_time >= clock::timestamp_ms(clock), ETimeMismatch);
+        assert!(market.start_time > clock::timestamp_ms(clock), ETimeMismatch);
         let borrow_mut_sale = launchpad_slingshot::borrow_mut_sales(slingshot, sale_id);
         let mut_market = launchpad_sale::get_mut_market<Item, Launchpad<Item, CoinType>>(borrow_mut_sale);
 
@@ -225,14 +225,14 @@ module swift_nft::launchpad {
         assert!(live, ESlingshotNotLive);
         let addr = sender(ctx);
         let market_fee = launchpad_slingshot::borrow_market_fee(slingshot);
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
+        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id);
         let launchpad = launchpad_sale::get_launchpad<Item, Launchpad<Item, CoinType>>(borrow_sale);
         assert!(coin::value(buyer_funds) == launchpad.price, ESalesFundsInsufficient);
         assert!(clock::timestamp_ms(clock) >= launchpad.start_time, ETimeMismatch);
         assert!(clock::timestamp_ms(clock) <= launchpad.end_time, ETimeMismatch);
         assert!(launchpad.minted_count < launchpad.max_count, EMintInsufficient);
         let market_price = launchpad.price * market_fee / 100;
-        let price = launchpad.price - market_fee;
+        let price = launchpad.price - market_price;
         if (market_price > 0) {
             pay::split_and_transfer(buyer_funds, market_price, sender(ctx), ctx);
         };
@@ -260,7 +260,7 @@ module swift_nft::launchpad {
         transfer::public_transfer(item, tx_context::sender(ctx));
     }
 
-    public entry fun multi_purchase<Item: key+store, CoinType>(
+    public entry fun purchase_without_whitelist<Item: key+store, CoinType>(
         slingshot: &mut Slingshot<Item, Launchpad<Item, CoinType>>,
         sale_id: ID,
         count: u64,
@@ -268,7 +268,7 @@ module swift_nft::launchpad {
         buyer_funds: &mut Coin<CoinType>,
         ctx: &mut TxContext
     ) {
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
+        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id);
         let whitelist = launchpad_sale::whitelist_status(borrow_sale);
         assert!(!whitelist, ENotAuthGetWhiteList);
         let i = 0;
@@ -278,17 +278,17 @@ module swift_nft::launchpad {
         }
     }
 
-    public entry fun whitelist_purchase<Item: key+store, CoinType>(
+    public entry fun purchase_with_whitelist<Item: key+store, CoinType>(
         slingshot: &mut Slingshot<Item, Launchpad<Item, CoinType>>,
         sale_id: ID,
         count: u64,
         clock: &Clock,
-        activity: &Activity<Item, Launchpad<Item, CoinType>>,
+        activity: &Activity,
         proof: vector<vector<u8>>,
-        buyer_funds: &mut  Coin<CoinType>,
+        buyer_funds: &mut Coin<CoinType>,
         ctx: &mut TxContext
     ) {
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
+        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id);
         let whitelist = launchpad_sale::whitelist_status(borrow_sale);
         if (whitelist == true) {
             let is_whitelist = check_whitelist(activity, proof, ctx);
@@ -315,26 +315,29 @@ module swift_nft::launchpad {
         // sale_event::wl_status_change_event<Item, Launchpad>(object::id(sales), true)
     }
 
-    public entry fun create_whitelist<Item: key+store, CoinType: store>(
-        slingshot: &mut Slingshot<Item, Launchpad<Item, CoinType>>,
+    public entry fun create_whitelist<Item: key+store, CoinType>(
+        slingshot: &Slingshot<Item, Launchpad<Item, CoinType>>,
+        activity_list:&mut ActivityList,
         sale_id: ID,
         root: vector<u8>,
+        url: vector<u8>,
         ctx: &mut TxContext
     ) {
         let admin = launchpad_slingshot::borrow_admin(slingshot);
         assert!(admin == tx_context::sender(ctx), EOperateNotAuth);
-        launchpad_whitelist::create_activity<Item, Launchpad<Item, CoinType>>(sale_id, root, ctx);
+        launchpad_whitelist::create_activity(activity_list, sale_id, root, url, ctx);
     }
 
-    public entry fun modify_whitelist<Item: key+store, CoinType: store>(
-        slingshot: &mut Slingshot<Item, Launchpad<Item, CoinType>>,
-        activity: &mut Activity<Item, Launchpad<Item, CoinType>>,
+    public entry fun modify_whitelist<Item: key+store, CoinType>(
+        slingshot: &Slingshot<Item, Launchpad<Item, CoinType>>,
+        activity: &mut Activity,
         root: vector<u8>,
+        url: vector<u8>,
         ctx: &mut TxContext
     ) {
         let admin = launchpad_slingshot::borrow_admin(slingshot);
         assert!(admin == tx_context::sender(ctx), EOperateNotAuth);
-        launchpad_whitelist::modify_activity<Item, Launchpad<Item, CoinType>>(activity, root);
+        launchpad_whitelist::modify_activity(activity, root, url);
     }
 
     public entry fun send_manager(manager: SwiftNftLaunchpadManagerCap, receiver: address){
