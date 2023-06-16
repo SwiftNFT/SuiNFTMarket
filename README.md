@@ -2,5 +2,15 @@
 NFT Market Based on Sui Blockchain
 
 
-# Publish
-sui client publish --gas-budget 500000000 contract/sources/ --skip-dependency-verification
+# Requirement
+install [Nodejs](https://nodejs.org/en) & [SUI](https://docs.sui.io/build/install)
+
+# Deploy
+```bash
+git clone https://github.com/SwiftNFT/SuiNFTMarket.git
+mv .env.example .env
+```
+### modify you `.env` file content
+```bash
+cd script; npm i;node ./deploy.js > log.out
+```
