@@ -91,9 +91,7 @@ module swift_market::launchpad_slingshot {
     public fun borrow_sales<Item: key+store, Launchpad: store>(
         slingshot: &Slingshot<Item, Launchpad>,
         sales_id: ID,
-        ctx: &mut TxContext
     ): &Sale<Item, Launchpad> {
-        assert!(slingshot.admin == tx_context::sender(ctx), EOperateNotAuth);
         // slingshot_event::sales_borrow_event<Item, Launchpad>(object::id(slingshot), tx_context::sender(ctx));
         object_table::borrow(&slingshot.sales, sales_id)
     }

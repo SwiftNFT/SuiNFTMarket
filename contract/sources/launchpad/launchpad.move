@@ -147,7 +147,7 @@ module swift_market::launchpad {
     ) {
         let admin = launchpad_slingshot::borrow_admin(slingshot);
         assert!(admin == tx_context::sender(ctx), EOperateNotAuth);
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
+        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id);
         let market = launchpad_sale::get_launchpad(borrow_sale);
         assert!(market.start_time > clock::timestamp_ms(clock), ETimeMismatch);
         let borrow_mut_sale = launchpad_slingshot::borrow_mut_sales(slingshot, sale_id);
@@ -225,7 +225,7 @@ module swift_market::launchpad {
         assert!(live, ESlingshotNotLive);
         let addr = sender(ctx);
         let market_fee = launchpad_slingshot::borrow_market_fee(slingshot);
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
+        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id);
         let launchpad = launchpad_sale::get_launchpad<Item, Launchpad<Item, CoinType>>(borrow_sale);
         assert!(coin::value(buyer_funds) == launchpad.price, ESalesFundsInsufficient);
         assert!(clock::timestamp_ms(clock) >= launchpad.start_time, ETimeMismatch);
@@ -260,7 +260,7 @@ module swift_market::launchpad {
         transfer::public_transfer(item, tx_context::sender(ctx));
     }
 
-    public entry fun multi_purchase<Item: key+store, CoinType>(
+    public entry fun purchase_without_whitelist<Item: key+store, CoinType>(
         slingshot: &mut Slingshot<Item, Launchpad<Item, CoinType>>,
         sale_id: ID,
         count: u64,
@@ -268,7 +268,7 @@ module swift_market::launchpad {
         buyer_funds: &mut Coin<CoinType>,
         ctx: &mut TxContext
     ) {
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
+        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id);
         let whitelist = launchpad_sale::whitelist_status(borrow_sale);
         assert!(!whitelist, ENotAuthGetWhiteList);
         let i = 0;
@@ -278,7 +278,7 @@ module swift_market::launchpad {
         }
     }
 
-    public entry fun whitelist_purchase<Item: key+store, CoinType>(
+    public entry fun purchase_with_whitelist<Item: key+store, CoinType>(
         slingshot: &mut Slingshot<Item, Launchpad<Item, CoinType>>,
         sale_id: ID,
         count: u64,
@@ -288,7 +288,7 @@ module swift_market::launchpad {
         buyer_funds: &mut Coin<CoinType>,
         ctx: &mut TxContext
     ) {
-        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id, ctx);
+        let borrow_sale = launchpad_slingshot::borrow_sales(slingshot, sale_id);
         let whitelist = launchpad_sale::whitelist_status(borrow_sale);
         if (whitelist == true) {
             let is_whitelist = check_whitelist(activity, proof, ctx);

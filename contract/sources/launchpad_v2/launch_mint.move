@@ -18,7 +18,7 @@ module swift_market::launchpad_v2 {
     use swift_market::launchpad_whitelist;
     use swift_market::launchpad_v2_slingshot;
     use swift_market::launchpad_event;
-    use swift_market::launchpad_v2_slingshot::Slingshot;
+    use swift_market::launchpad_v2_slingshot::{Slingshot, LaunchpadCap};
 
     struct Launchpad<phantom Item, phantom CoinType>has key, store {
         id: UID,
@@ -33,13 +33,9 @@ module swift_market::launchpad_v2 {
         balance: Coin<CoinType>
     }
 
-    struct LaunchpadManagerCap has key, store {
-        id: UID,
-        market_fee: u64
-    }
-
     struct MintCap<phantom Item> has key, store {
         id: UID,
+        num: u64
     }
 
     const MarketFee: u64 = 5;
@@ -55,16 +51,8 @@ module swift_market::launchpad_v2 {
     const ESlingshotNotLive: u64 = 7;
 
 
-    fun init(ctx: &mut TxContext) {
-        transfer::public_transfer(LaunchpadManagerCap {
-            id: object::new(ctx),
-            market_fee: 5
-        }, sender(ctx));
-    }
-
-
     public entry fun create_multi_sales_launchpad<Item: key+store, CoinType>(
-        manager: &LaunchpadManagerCap,
+        manager: &LaunchpadCap<Launchpad<Item, CoinType>>,
         admin: address,
         whitelists: vector<bool>,
         max_counts: vector<u64>,
@@ -100,12 +88,12 @@ module swift_market::launchpad_v2 {
             vector::push_back(&mut result, launchpad);
             vector::push_back(&mut launchpad_ids, launchpad_id);
         };
-        let slingshot_id = launchpad_v2_slingshot::create_slingshot<Launchpad<Item, CoinType>>(admin, true, manager.market_fee, result, ctx);
+        let (slingshot_id, market_fee) = launchpad_v2_slingshot::create_slingshot<Launchpad<Item, CoinType>>(manager, admin, true,  result, ctx);
         launchpad_event::slingshot_create_event(
             slingshot_id,
             admin,
             true,
-            manager.market_fee,
+            market_fee,
             launchpad_ids,
         );
     }
@@ -169,15 +157,19 @@ module swift_market::launchpad_v2 {
         transfer::public_transfer(coins, receiver)
     }
 
-
+    public entry fun delete_mint_cap<Item>(mint_cap: MintCap<Item>) {
+        let MintCap<Item> { id, num: _, } = mint_cap;
+        object::delete(id);
+    }
 
     fun purchase<Item: key+store, CoinType>(
         slingshot: &mut Slingshot,
         launchpad_id: ID,
         clock: &Clock,
         buyer_funds: &mut Coin<CoinType>,
+        mint_cap: &mut MintCap<Item>,
         ctx: &mut TxContext
-    ): MintCap<Item> {
+    ) {
         let live = launchpad_v2_slingshot::borrow_live(slingshot);
         assert!(live, ESlingshotNotLive);
         let addr = sender(ctx);
@@ -209,9 +201,7 @@ module swift_market::launchpad_v2 {
         //     price,
         //     tx_context::sender(ctx)
         // );
-        MintCap<Item>{
-            id: object::new(ctx)
-        }
+        mint_cap.num = mint_cap.num + 1;
     }
 
     public fun purchase_without_whitelist<Item: key+store, CoinType>(
@@ -221,15 +211,15 @@ module swift_market::launchpad_v2 {
         clock: &Clock,
         buyer_funds: &mut Coin<CoinType>,
         ctx: &mut TxContext
-    ): vector<MintCap<Item>> {
-        let launchpad = launchpad_v2_slingshot::borrow_launchpad<Launchpad<Item,CoinType>>(slingshot, launchpad_id, ctx);
+    ): MintCap<Item> {
+        let launchpad = launchpad_v2_slingshot::borrow_launchpad<Launchpad<Item,CoinType>>(slingshot, launchpad_id);
         assert!(!launchpad.is_whitelist, ENotAuthGetWhiteList);
-        let mint_caps = vector::empty<MintCap<Item>>();
+        let mint_cap = MintCap<Item>{ id: object::new(ctx), num: 0 };
         while (count > 0) {
-            vector::push_back(&mut mint_caps, purchase(slingshot, launchpad_id, clock, buyer_funds, ctx));
-            count = count - 1;
+            purchase(slingshot, launchpad_id, clock, buyer_funds, &mut mint_cap, ctx);
+            count = count -1;
         };
-        mint_caps
+        mint_cap
     }
 
     public fun purchase_with_whitelist<Item: key+store, CoinType>(
@@ -241,16 +231,16 @@ module swift_market::launchpad_v2 {
         proof: vector<vector<u8>>,
         buyer_funds: &mut  Coin<CoinType>,
         ctx: &mut TxContext
-    ): vector<MintCap<Item>> {
-        let launchpad = launchpad_v2_slingshot::borrow_launchpad<Launchpad<Item,CoinType>>(slingshot, launchpad_id, ctx);
+    ): MintCap<Item> {
+        let launchpad = launchpad_v2_slingshot::borrow_launchpad<Launchpad<Item,CoinType>>(slingshot, launchpad_id);
         assert!(launchpad.is_whitelist, ENotAuthGetWhiteList);
         assert!(check_whitelist(activity, proof, ctx), ENotAuthGetWhiteList);
-        let mint_caps = vector::empty<MintCap<Item>>();
+        let mint_cap = MintCap<Item>{ id: object::new(ctx), num: 0 };
         while (count > 0) {
-            vector::push_back(&mut mint_caps,purchase(slingshot, launchpad_id, clock, buyer_funds, ctx));
+            purchase(slingshot, launchpad_id, clock, buyer_funds, &mut mint_cap, ctx);
             count = count -1;
         };
-        mint_caps
+        mint_cap
     }
 
     public entry fun update_whitelist_status<Item: key+store, CoinType>(
@@ -292,8 +282,10 @@ module swift_market::launchpad_v2 {
         launchpad_whitelist::modify_activity(activity, root, url);
     }
 
-    public entry fun send_manager(manager: LaunchpadManagerCap, receiver: address){
-        transfer::public_transfer(manager, receiver);
+
+
+    public entry fun mint_cap_inner_num<Item: key+store>(mint_cap: &MintCap<Item>): u64{
+        mint_cap.num
     }
 
 }

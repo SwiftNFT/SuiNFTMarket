@@ -3,7 +3,7 @@
 module swift_market::launchpad_v2_slingshot {
 
     use sui::object::{Self, UID, ID};
-    use sui::tx_context::TxContext;
+    use sui::tx_context::{TxContext, sender};
     use sui::transfer;
     use std::vector;
     use sui::tx_context;
@@ -18,20 +18,43 @@ module swift_market::launchpad_v2_slingshot {
 
     const EOperateNotAuth: u64 = 0;
 
+    struct AdminCap has key, store {
+        id: UID,
+        market_fee: u64
+    }
 
+    struct LaunchpadCap<phantom Item: key+store> has key {
+        id: UID,
+        market_fee: u64
+    }
+
+    fun init(ctx: &mut TxContext) {
+        transfer::public_transfer(AdminCap {
+            id: object::new(ctx),
+            market_fee: 5
+        }, sender(ctx));
+    }
+
+    public entry fun send_admin(manager: AdminCap, receiver: address){
+        transfer::public_transfer(manager, receiver);
+    }
+
+    public entry fun create_slingshot_cap<Launchpad: key+store>(_admin: &AdminCap, market_fee: u64, receiver: address, ctx: &mut TxContext){
+        transfer::transfer(LaunchpadCap<Launchpad>{ id:object::new(ctx), market_fee }, receiver);
+    }
 
     public fun create_slingshot<Launchpad: key+ store>(
+        launchpad_cap: &LaunchpadCap<Launchpad>,
         admin: address,
         live: bool,
-        market_fee: u64,
         launchpad: vector<Launchpad>,
         ctx: &mut TxContext
-    ): ID {
+    ): (ID, u64) {
         let slingshot = Slingshot{
             id: object::new(ctx),
             admin,
             live,
-            market_fee,
+            market_fee: launchpad_cap.market_fee,
         };
         let length = vector::length(&launchpad);
         let i = 0;
@@ -44,8 +67,7 @@ module swift_market::launchpad_v2_slingshot {
         vector::destroy_empty(launchpad);
         let slingshot_id = object::id(&slingshot);
         transfer::share_object(slingshot);
-
-        return slingshot_id
+        return (slingshot_id, launchpad_cap.market_fee)
     }
 
     public fun add_multi_launchpad<Launchpad: key+store>(
@@ -86,9 +108,7 @@ module swift_market::launchpad_v2_slingshot {
     public fun borrow_launchpad<Launchpad: key+store>(
         slingshot: &Slingshot,
         launchpad_id: ID,
-        ctx: &mut TxContext
     ): &Launchpad {
-        assert!(slingshot.admin == tx_context::sender(ctx), EOperateNotAuth);
         dof::borrow(&slingshot.id, launchpad_id)
     }
 
