@@ -37,8 +37,8 @@ async function main() {
 
     txb.transferObjects([cap], txb.pure(await signer.getAddress()));
 
-    const result = await signer.dryRunTransactionBlock({
-        transactionBlock: txb
+    const result = await signer.signAndExecuteTransactionBlock({
+        transactionBlock: txb, options: {showEffects: true}
     });
     console.log("status", result.effects?.status)
 
@@ -46,10 +46,8 @@ async function main() {
     console.log("transactionDigest",result.effects.transactionDigest)
 
 
-    // const result = await signer.signAndExecuteTransactionBlock({
-    //     transactionBlock: txb, options: {showEffects: true}
-    // });
-    // console.log({ result }, result.effects?.status)
+
+    console.log({ result }, result.effects?.status)
 }
 
 
