@@ -1,6 +1,6 @@
 module swift_market::ob_market {
-    use liquidity_layer::orderbook;
-    use liquidity_layer::orderbook::Orderbook;
+    use liquidity_layer_v1::orderbook;
+    use liquidity_layer_v1::orderbook::Orderbook;
     use sui::kiosk::Kiosk;
     use sui::object::ID;
     use sui::tx_context::{TxContext, sender};
