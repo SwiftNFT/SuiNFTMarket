@@ -17,7 +17,7 @@ module swift_market::bid {
     use nft_protocol::royalty_strategy_bps;
     use ob_kiosk::ob_kiosk;
     use sui::balance;
-    use sui::transfer::public_transfer;
+    use sui::transfer::{public_transfer, share_object};
     use sui::pay;
 
     ///Bid Item Object
@@ -29,6 +29,23 @@ module swift_market::bid {
         funds: Coin<CoinType>,
     }
 
+    ///Record some important information of the market
+    struct BidMarketplace has key {
+        id: UID,
+        ///marketplace fee collected by marketplace
+        beneficiary: address,
+        ///marketplace fee  of the marketplace
+        fee: u64,
+    }
+
+    fun init(ctx: &mut TxContext){
+        let ob_market = BidMarketplace {
+            id: object::new(ctx),
+            beneficiary: sender(ctx),
+            fee: 0,
+        };
+        share_object(ob_market)
+    }
 
 
     const EBidObjectMismatch: u64 = 0;
@@ -37,7 +54,14 @@ module swift_market::bid {
     const ETwoObjectMismatch: u64 = 3;
     const ENoAuth: u64 = 4;
     const EObjectNoExist: u64 = 5;
+    const EMarketFee: u64 = 6;
 
+
+    public entry fun modify_ob_market(bid_market: &mut BidMarketplace, beneficiary: address, fee: u64) {
+        assert!(fee < 10000, EMarketFee);
+        bid_market.fee = fee;
+        bid_market.beneficiary = beneficiary
+    }
     ///Place a bid on an NFT and lock in the bid funds for a period of time
     public entry fun new_bid<CoinType>(item_id: ID, funds: Coin<CoinType>, ctx: &mut TxContext) {
         let amount = coin::value(&funds);
@@ -77,6 +101,7 @@ module swift_market::bid {
 
     ///Make bids on NFTs listed in the market
     public entry fun accept_bid_from_market<Item: key+store, CoinType>(
+        bid_market: &BidMarketplace,
         market: &mut Marketplace<CoinType>,
         item_id: ID,
         bid: &mut Bid<CoinType>,
@@ -84,7 +109,7 @@ module swift_market::bid {
     ) {
         //Remove NFT from the market
         let items = market::delist(market, item_id, ctx);
-        accept_bid<Item, CoinType>(items, bid, ctx)
+        accept_bid<Item, CoinType>(bid_market, items, bid, ctx)
     }
 
     // public entry fun accept_ob_bid_no_orderbook<Item: key+store, CoinType>(
@@ -110,6 +135,7 @@ module swift_market::bid {
 
     ///Make bids on NFTs unlisted in the market
     public entry fun accept_bid<Item: key+store, CoinType>(
+        bid_market: &BidMarketplace,
         items: Item,
         bid: &mut Bid<CoinType>,
         ctx: &mut TxContext
@@ -123,9 +149,9 @@ module swift_market::bid {
         bid_event::bid_complete_event(object::id(&items), bid_id, tx_context::sender(ctx), amount);
 
         transfer::public_transfer(items, bid.bidder);
-        let market_fee = amount * 150 / 10000;
+        let market_fee = amount * bid_market.fee / 10000;
         let receiver_amount = amount - market_fee;
-        pay::split_and_transfer(&mut bid.funds, market_fee, @beneficiary, ctx);
+        pay::split_and_transfer(&mut bid.funds, market_fee, bid_market.beneficiary, ctx);
         pay::split_and_transfer(&mut bid.funds, receiver_amount, tx_context::sender(ctx) ,ctx);
         // let Bid{
         //     id,

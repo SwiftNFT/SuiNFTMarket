@@ -92,7 +92,7 @@ module swift_market::market {
             id: object::new(ctx),
             version: VERSION,
             balance: coin::zero<SUI>(ctx),
-            fee: 150,
+            fee: 0,
         };
         // Claim the `Publisher` for the package!
         let publisher = package::claim(otw, ctx);
