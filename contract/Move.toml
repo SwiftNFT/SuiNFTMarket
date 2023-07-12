@@ -1,12 +1,12 @@
 [package]
 name = "swift_market"
-version = "1.0.0"
-#published-at = "0x7ea4ceb1785050e16502b087d3dcc0bc3bcf71ba3b4e52a54677c1adbfcbf557"
+version = "1.1.0"
+published-at = "0x9fd90ae353953fb1215e4bf70e0399042bdd5f4540abb9e61ca464cf17e6c93f"
 
 [dependencies]
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "8b681515c0cf435df2a54198a28ab4ef574d202b", override = true }
-LiquidityLayerV1 = { git = "https://github.com/Origin-Byte/nft-protocol.git", subdir = "contracts/liquidity_layer_v1", rev = "93f6cd0b8966354b1b00e7d798cbfddaa867a07b"}
-NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", subdir = "contracts/nft_protocol", rev = "93f6cd0b8966354b1b00e7d798cbfddaa867a07b", override = true}
+LiquidityLayerV1 = { git = "https://github.com/Origin-Byte/nft-protocol.git", subdir = "contracts/liquidity_layer_v1", rev = "1b80a7fa0724383c4e838d8080f660ad516fea34"}
+NftProtocol = { git = "https://github.com/Origin-Byte/nft-protocol.git", subdir = "contracts/nft_protocol", rev = "1b80a7fa0724383c4e838d8080f660ad516fea34", override = true}
 
 [addresses]
 swift_market = "0x0"
