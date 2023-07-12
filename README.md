@@ -14,3 +14,10 @@ mv .env.example .env
 ```bash
 cd script; npm i;node ./deploy.js >> log.out
 ```
+
+# Upgrade
+input package_id & upgrade_cap to `.env`
+
+```bash
+cd script; npm i;node ./upgrade.js >> log.out
+```
